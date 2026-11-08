@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import com.example.minimallauncher.launcher.home.HomeScreen
 import com.example.minimallauncher.ui.theme.MinimalLauncherTheme
+import com.example.minimallauncher.launcher.LauncherScreen
 
 class MainActivity : ComponentActivity() {
 
@@ -16,7 +17,7 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             MinimalLauncherTheme {
-                HomeScreen()
+                LauncherScreen()
             }
         }
     }
