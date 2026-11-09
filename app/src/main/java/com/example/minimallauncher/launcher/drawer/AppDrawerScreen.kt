@@ -398,13 +398,13 @@ private fun CategoryRow(
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier
                 .align(Alignment.TopStart)
-                .padding(start = 8.dp, top = 8.dp)
+                .padding(start = 18.dp, top = 12.dp)
         )
 
         Row(
             modifier = Modifier
-                .align(Alignment.CenterEnd)
-                .padding(end = 36.dp),
+                .align(Alignment.BottomEnd)
+                .padding(bottom = 12.dp, end = 36.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
