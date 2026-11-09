@@ -51,7 +51,7 @@ fun LauncherScreen() {
     val drawerHeightPx = with(density) { configuration.screenHeightDp.dp.toPx() }
     val baseGestureThresholdPx = minOf(drawerHeightPx * 0.22f, with(density) { 160.dp.toPx() })
     val openThresholdPx = baseGestureThresholdPx / 16f
-    val closeThresholdPx = minOf(drawerHeightPx * 0.16f, with(density) { 160.dp.toPx() })
+    val closeThresholdPx = baseGestureThresholdPx / 16f
     val drawerOffset = remember { mutableFloatStateOf(drawerHeightPx) }
     val drawerListState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
@@ -144,11 +144,17 @@ fun LauncherScreen() {
                 val deltaY = positionChange.y
                 totalDrag += deltaY
                 totalHorizontalDrag += positionChange.x
+                val directionMatches = if (wasOpenAtStart) {
+                    abs(totalDrag) > abs(totalHorizontalDrag)
+                } else {
+                    abs(totalDrag) >= abs(totalHorizontalDrag) * 0.65f
+                }
+                val hasVerticalIntent =
+                    abs(totalDrag) > viewConfiguration.touchSlop && directionMatches
 
                 if (
                     !isDraggingDrawer &&
-                    abs(totalDrag) > viewConfiguration.touchSlop &&
-                    abs(totalDrag) > abs(totalHorizontalDrag)
+                    hasVerticalIntent
                 ) {
                     if (!wasOpenAtStart && totalDrag < 0f) {
                         isDraggingDrawer = true
