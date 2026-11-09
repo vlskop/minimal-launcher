@@ -50,6 +50,7 @@ fun LauncherScreen() {
     val configuration = LocalConfiguration.current
     val drawerHeightPx = with(density) { configuration.screenHeightDp.dp.toPx() }
     val dismissThresholdPx = minOf(drawerHeightPx * 0.22f, with(density) { 160.dp.toPx() })
+    val openThresholdPx = dismissThresholdPx / 2f
     val drawerOffset = remember { mutableFloatStateOf(drawerHeightPx) }
     val drawerListState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
@@ -176,7 +177,7 @@ fun LauncherScreen() {
             if (isDraggingDrawer) {
                 val shouldClose = wasOpenAtStart && drawerOffset.floatValue >= dismissThresholdPx
                 val shouldOpen = !wasOpenAtStart &&
-                    drawerOffset.floatValue <= drawerHeightPx - dismissThresholdPx
+                    drawerOffset.floatValue <= drawerHeightPx - openThresholdPx
                 val shouldSettleOpen = if (wasOpenAtStart) !shouldClose else shouldOpen
                 val target = if (shouldSettleOpen) 0f else drawerHeightPx
                 settleJob.value = coroutineScope.launch {
