@@ -51,6 +51,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLocale
@@ -271,12 +272,12 @@ private fun DrawerCategoriesContent(
             }
         }
 
-        Spacer(Modifier.height(39.dp))
+        Spacer(Modifier.height(12.dp))
 
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(37.dp),
+                .height(20.dp),
             contentAlignment = Alignment.Center
         ) {
             Text(
@@ -300,6 +301,7 @@ private fun AppSearchField(
     palette: DrawerPalette,
     modifier: Modifier = Modifier
 ) {
+    var isFocused by remember { mutableStateOf(false) }
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -324,7 +326,7 @@ private fun AppSearchField(
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
             decorationBox = { innerTextField ->
                 Box(Modifier.fillMaxWidth()) {
-                    if (value.isEmpty()) {
+                    if (value.isEmpty() && !isFocused) {
                         Text(
                             text = "Поиск приложений",
                             color = palette.secondaryText,
@@ -335,7 +337,9 @@ private fun AppSearchField(
                     innerTextField()
                 }
             },
-            modifier = Modifier.weight(1f)
+            modifier = Modifier
+                .weight(1f)
+                .onFocusChanged { isFocused = it.isFocused }
         )
         IconButton(onClick = onClear, modifier = Modifier.size(36.dp)) {
             Image(
