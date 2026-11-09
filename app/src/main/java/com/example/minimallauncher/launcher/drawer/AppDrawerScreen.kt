@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -21,6 +22,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
@@ -38,6 +40,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -54,6 +57,7 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
@@ -71,7 +75,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.minimallauncher.core.model.AppInfo
 import com.example.minimallauncher.launcher.FavoriteAppsViewModel
 import com.example.minimallauncher.launcher.home.AppViewModel
+import androidx.compose.runtime.snapshotFlow
 import java.text.Collator
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 
 private data class DrawerPalette(
@@ -115,6 +122,7 @@ fun AppDrawerScreen(
     val favoriteViewModel: FavoriteAppsViewModel = viewModel()
     val favorites by favoriteViewModel.favorites.collectAsState()
     val context = LocalContext.current
+    val focusManager = LocalFocusManager.current
     val coroutineScope = rememberCoroutineScope()
     val locale = LocalLocale.current.platformLocale
     val palette = if (MaterialTheme.colorScheme.background.luminance() < 0.5f) {
@@ -124,7 +132,18 @@ fun AppDrawerScreen(
     }
 
     var searchQuery by remember { mutableStateOf("") }
+    var searchFocused by remember { mutableStateOf(false) }
     var selectedCategoryKey by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(searchFocused) {
+        if (searchFocused) {
+            snapshotFlow { WindowInsets.isImeVisible }
+                .drop(1)
+                .collect { imeVisible ->
+                    if (!imeVisible) focusManager.clearFocus()
+                }
+        }
+    }
 
     val categorizedApps = remember(apps, context, locale) {
         apps.map { app -> categoryFor(context, app) to app }
@@ -162,10 +181,15 @@ fun AppDrawerScreen(
                 favorites = favorites,
                 searchQuery = searchQuery,
                 onSearchQueryChange = { searchQuery = it },
-                onClearSearch = { searchQuery = "" },
+                onClearSearch = {
+                    searchQuery = ""
+                    focusManager.clearFocus()
+                },
+                onSearchFocusChange = { searchFocused = it },
                 listState = listState,
                 palette = palette,
                 onOpenCategory = { category ->
+                    focusManager.clearFocus()
                     selectedCategoryKey = category.label.normalizedCategoryKey(locale)
                 },
                 onLaunch = { app ->
@@ -181,7 +205,11 @@ fun AppDrawerScreen(
     }
 
     BackHandler(enabled = selectedGroup == null) {
-        coroutineScope.launch { onClose() }
+        if (searchFocused) {
+            focusManager.clearFocus()
+        } else {
+            coroutineScope.launch { onClose() }
+        }
     }
 
     if (selectedGroup != null) {
@@ -216,6 +244,7 @@ private fun DrawerCategoriesContent(
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit,
     onClearSearch: () -> Unit,
+    onSearchFocusChange: (Boolean) -> Unit,
     listState: LazyListState,
     palette: DrawerPalette,
     onOpenCategory: (AppCategory) -> Unit,
@@ -231,6 +260,7 @@ private fun DrawerCategoriesContent(
             value = searchQuery,
             onValueChange = onSearchQueryChange,
             onClear = onClearSearch,
+            onFocusChange = onSearchFocusChange,
             palette = palette,
             modifier = Modifier.padding(top = 4.dp)
         )
@@ -298,10 +328,10 @@ private fun AppSearchField(
     value: String,
     onValueChange: (String) -> Unit,
     onClear: () -> Unit,
+    onFocusChange: (Boolean) -> Unit,
     palette: DrawerPalette,
     modifier: Modifier = Modifier
 ) {
-    var isFocused by remember { mutableStateOf(false) }
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -326,7 +356,7 @@ private fun AppSearchField(
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
             decorationBox = { innerTextField ->
                 Box(Modifier.fillMaxWidth()) {
-                    if (value.isEmpty() && !isFocused) {
+                    if (value.isEmpty()) {
                         Text(
                             text = "Поиск приложений",
                             color = palette.secondaryText,
@@ -339,7 +369,7 @@ private fun AppSearchField(
             },
             modifier = Modifier
                 .weight(1f)
-                .onFocusChanged { isFocused = it.isFocused }
+                .onFocusChanged { onFocusChange(it.isFocused) }
         )
         IconButton(onClick = onClear, modifier = Modifier.size(36.dp)) {
             Image(
