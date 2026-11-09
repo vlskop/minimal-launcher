@@ -1,6 +1,9 @@
 package com.example.minimallauncher.launcher.drawer
 
 import androidx.compose.foundation.Image
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationVector1D
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -26,7 +29,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -43,10 +45,12 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.asImageBitmap
@@ -54,6 +58,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -67,6 +73,7 @@ import com.example.minimallauncher.core.model.AppInfo
 import com.example.minimallauncher.launcher.FavoriteAppsViewModel
 import com.example.minimallauncher.launcher.home.AppViewModel
 import java.text.Collator
+import kotlinx.coroutines.launch
 
 private data class DrawerPalette(
     val background: Color,
@@ -102,12 +109,17 @@ private val DarkDrawerPalette = DrawerPalette(
 @Composable
 fun AppDrawerScreen(
     viewModel: AppViewModel = viewModel(),
-    onClose: () -> Unit
+    listState: LazyListState,
+    drawerOffset: Animatable<Float, AnimationVector1D>,
+    drawerHeightPx: Float,
+    modifier: Modifier = Modifier,
+    onClose: suspend () -> Unit
 ) {
     val apps by viewModel.apps.collectAsState()
     val favoriteViewModel: FavoriteAppsViewModel = viewModel()
     val favorites by favoriteViewModel.favorites.collectAsState()
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     val locale = LocalLocale.current.platformLocale
     val palette = if (MaterialTheme.colorScheme.background.luminance() < 0.5f) {
         DarkDrawerPalette
@@ -118,8 +130,6 @@ fun AppDrawerScreen(
     var searchQuery by remember { mutableStateOf("") }
     var sortByCount by remember { mutableStateOf(false) }
     var selectedCategoryKey by remember { mutableStateOf<String?>(null) }
-    val categoryListState = rememberLazyListState()
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     val categorizedApps = remember(apps, context, locale) {
         apps.map { app -> categoryFor(context, app) to app }
@@ -140,33 +150,72 @@ fun AppDrawerScreen(
         category.label.normalizedCategoryKey(locale) == selectedCategoryKey
     }
 
-    ModalBottomSheet(
-        onDismissRequest = onClose,
-        sheetState = sheetState,
-        containerColor = palette.background,
-        contentColor = palette.text
-    ) {
-        DrawerCategoriesContent(
-            appsCount = filteredApps.size,
-            groups = groupedApps,
-            favorites = favorites,
-            searchQuery = searchQuery,
-            onSearchQueryChange = { searchQuery = it },
-            onClearSearch = { searchQuery = "" },
-            sortByCount = sortByCount,
-            onToggleSort = { sortByCount = !sortByCount },
-            listState = categoryListState,
-            palette = palette,
-            onOpenCategory = { category ->
-                selectedCategoryKey = category.label.normalizedCategoryKey(locale)
-            },
-            onLaunch = { app ->
-                onClose()
-                context.packageManager.getLaunchIntentForPackage(app.packageName)
-                    ?.let(context::startActivity)
-            },
-            onToggleFavorite = favoriteViewModel::toggleFavorite
+    Box(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    alpha = (1f - drawerOffset.value / drawerHeightPx)
+                        .coerceIn(0f, 1f) * 0.32f
+                }
+                .background(Color.Black)
+                .clickable {
+                    coroutineScope.launch { onClose() }
+                }
         )
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .background(palette.background)
+                .statusBarsPadding()
+                .navigationBarsPadding()
+                .graphicsLayer {
+                    alpha = (1f - drawerOffset.value / drawerHeightPx).coerceIn(0f, 1f)
+                }
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(24.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Box(
+                    modifier = Modifier
+                        .width(36.dp)
+                        .height(4.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(palette.secondaryText.copy(alpha = 0.55f))
+                )
+            }
+            DrawerCategoriesContent(
+                modifier = Modifier.weight(1f),
+                appsCount = filteredApps.size,
+                groups = groupedApps,
+                favorites = favorites,
+                searchQuery = searchQuery,
+                onSearchQueryChange = { searchQuery = it },
+                onClearSearch = { searchQuery = "" },
+                sortByCount = sortByCount,
+                onToggleSort = { sortByCount = !sortByCount },
+                listState = listState,
+                palette = palette,
+                onOpenCategory = { category ->
+                    selectedCategoryKey = category.label.normalizedCategoryKey(locale)
+                },
+                onLaunch = { app ->
+                    coroutineScope.launch {
+                        onClose()
+                        context.packageManager.getLaunchIntentForPackage(app.packageName)
+                            ?.let(context::startActivity)
+                    }
+                },
+                onToggleFavorite = favoriteViewModel::toggleFavorite
+            )
+        }
+    }
+
+    BackHandler(enabled = selectedGroup == null) {
+        coroutineScope.launch { onClose() }
     }
 
     if (selectedGroup != null) {
@@ -195,6 +244,7 @@ fun AppDrawerScreen(
 
 @Composable
 private fun DrawerCategoriesContent(
+    modifier: Modifier = Modifier,
     appsCount: Int,
     groups: List<Pair<AppCategory, List<AppInfo>>>,
     favorites: List<String>,
@@ -210,9 +260,8 @@ private fun DrawerCategoriesContent(
     onToggleFavorite: (String) -> Unit
 ) {
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
-            .fillMaxHeight()
             .padding(horizontal = 24.dp)
     ) {
         AppSearchField(
