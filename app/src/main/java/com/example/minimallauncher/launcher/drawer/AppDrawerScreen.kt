@@ -316,6 +316,7 @@ private fun AppSearchField(
     palette: DrawerPalette,
     modifier: Modifier = Modifier
 ) {
+    var isFocused by remember { mutableStateOf(false) }
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -340,7 +341,7 @@ private fun AppSearchField(
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
             decorationBox = { innerTextField ->
                 Box(Modifier.fillMaxWidth()) {
-                    if (value.isEmpty()) {
+                    if (value.isEmpty() && !isFocused) {
                         Text(
                             text = "Поиск приложений",
                             color = palette.secondaryText,
@@ -353,7 +354,10 @@ private fun AppSearchField(
             },
             modifier = Modifier
                 .weight(1f)
-                .onFocusChanged { onFocusChange(it.isFocused) }
+                .onFocusChanged {
+                    isFocused = it.isFocused
+                    onFocusChange(it.isFocused)
+                }
         )
         IconButton(onClick = onClear, modifier = Modifier.size(36.dp)) {
             Image(
