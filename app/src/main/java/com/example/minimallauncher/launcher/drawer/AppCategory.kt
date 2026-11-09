@@ -1,65 +1,75 @@
 package com.example.minimallauncher.launcher.drawer
 
+import android.content.Context
 import android.content.pm.ApplicationInfo
 import com.example.minimallauncher.core.model.AppInfo
 import java.util.Locale
 
-enum class AppCategory(val label: String) {
-    SOCIAL("Соцсети"),
-    TRAVEL("Путешествия"),
-    ENTERTAINMENT("Развлечения"),
-    FINANCE("Финансы"),
-    SHOPPING("Покупки"),
-    WORK("Работа"),
-    TOOLS("Инструменты")
-}
+data class AppCategory(val label: String)
 
-fun categoryFor(app: AppInfo): AppCategory {
-    val searchText = "${app.name} ${app.packageName}".lowercase(Locale.ROOT)
+private data class CategoryRule(
+    val label: String,
+    val terms: List<String>
+)
 
-    return when {
-        searchText.containsAny(
+private val fallbackCategoryRules = listOf(
+    CategoryRule(
+        label = "Соцсети",
+        terms = listOf(
             "telegram", "whatsapp", "vkontakte", "vk.com", "instagram", "facebook",
             "messenger", "snapchat", "discord", "reddit", "tiktok", "соцсеть", "однокласс"
-        ) -> AppCategory.SOCIAL
-
-        searchText.containsAny(
+        )
+    ),
+    CategoryRule(
+        label = "Путешествия",
+        terms = listOf(
             "maps", "map.", "карты", "2gis", "2гис", "uber", "taxi", "такси", "travel",
             "trip", "booking", "airbnb", "авиа", "поезд", "навигац"
-        ) -> AppCategory.TRAVEL
-
-        searchText.containsAny(
+        )
+    ),
+    CategoryRule(
+        label = "Развлечения",
+        terms = listOf(
             "youtube", "spotify", "netflix", "kinopoisk", "кино", "музык", "видео",
             "игр", "game", "music", "media", "twitch", "развлеч"
-        ) -> AppCategory.ENTERTAINMENT
-
-        searchText.containsAny(
+        )
+    ),
+    CategoryRule(
+        label = "Финансы",
+        terms = listOf(
             "bank", "finance", "wallet", "pay", "сбер", "банк", "финанс", "т-банк",
             "тинькофф", "альфа", "втб", "мир"
-        ) -> AppCategory.FINANCE
-
-        searchText.containsAny(
+        )
+    ),
+    CategoryRule(
+        label = "Покупки",
+        terms = listOf(
             "ozon", "wildberries", "market", "shopping", "shop", "store", "amazon",
             "aliexpress", "покуп", "магазин", "маркет", "wb"
-        ) -> AppCategory.SHOPPING
-
-        searchText.containsAny(
+        )
+    ),
+    CategoryRule(
+        label = "Работа",
+        terms = listOf(
             "gmail", "outlook", "mail", "почта", "office", "docs", "drive", "диск",
             "calendar", "календар", "zoom", "teams", "slack", "notion", "рабоч", "business"
-        ) -> AppCategory.WORK
+        )
+    )
+)
 
-        app.category == ApplicationInfo.CATEGORY_SOCIAL -> AppCategory.SOCIAL
-        app.category == ApplicationInfo.CATEGORY_MAPS -> AppCategory.TRAVEL
-        app.category in setOf(
-            ApplicationInfo.CATEGORY_GAME,
-            ApplicationInfo.CATEGORY_AUDIO,
-            ApplicationInfo.CATEGORY_VIDEO,
-            ApplicationInfo.CATEGORY_IMAGE
-        ) -> AppCategory.ENTERTAINMENT
-
-        app.category == ApplicationInfo.CATEGORY_PRODUCTIVITY -> AppCategory.WORK
-        else -> AppCategory.TOOLS
+fun categoryFor(context: Context, app: AppInfo): AppCategory {
+    if (app.category != ApplicationInfo.CATEGORY_UNDEFINED) {
+        ApplicationInfo.getCategoryTitle(context, app.category)
+            ?.toString()
+            ?.trim()
+            ?.takeIf(String::isNotEmpty)
+            ?.let { return AppCategory(it) }
     }
-}
 
-private fun String.containsAny(vararg values: String): Boolean = values.any(::contains)
+    val appIdentity = "${app.name} ${app.packageName}".lowercase(Locale.ROOT)
+    val inferredLabel = fallbackCategoryRules.firstOrNull { rule ->
+        rule.terms.any(appIdentity::contains)
+    }?.label
+
+    return AppCategory(inferredLabel ?: "Без категории")
+}
