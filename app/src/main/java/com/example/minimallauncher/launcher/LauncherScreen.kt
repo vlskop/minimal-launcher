@@ -99,38 +99,42 @@ fun LauncherScreen() {
         isDrawerOpen = false
     }
 
+    val homeSwipeModifier = if (isDrawerOpen) {
+        Modifier
+    } else {
+        Modifier.pointerInput(Unit) {
+            awaitEachGesture {
+                val down = awaitFirstDown(
+                    requireUnconsumed = false,
+                    pass = PointerEventPass.Initial
+                )
+
+                var totalDrag = 0f
+
+                do {
+                    val event = awaitPointerEvent(
+                        PointerEventPass.Initial
+                    )
+
+                    val change = event.changes
+                        .firstOrNull { it.id == down.id }
+                        ?: break
+
+                    totalDrag += change.positionChange().y
+
+                } while (change.pressed)
+
+                if (totalDrag < -80f) {
+                    isDrawerOpen = true
+                }
+            }
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .pointerInput(isDrawerOpen) {
-                awaitEachGesture {
-                    if (isDrawerOpen) return@awaitEachGesture
-
-                    val down = awaitFirstDown(
-                        requireUnconsumed = false,
-                        pass = PointerEventPass.Initial
-                    )
-
-                    var totalDrag = 0f
-
-                    do {
-                        val event = awaitPointerEvent(
-                            PointerEventPass.Initial
-                        )
-
-                        val change = event.changes
-                            .firstOrNull { it.id == down.id }
-                            ?: break
-
-                        totalDrag += change.positionChange().y
-
-                    } while (change.pressed)
-
-                    if (totalDrag < -80f && !isDrawerOpen) {
-                        isDrawerOpen = true
-                    }
-                }
-            }
+            .then(homeSwipeModifier)
     ) {
         HomeScreen(appViewModel = appViewModel)
 
