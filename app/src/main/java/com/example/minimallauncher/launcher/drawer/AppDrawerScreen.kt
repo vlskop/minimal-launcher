@@ -32,6 +32,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.MaterialTheme
@@ -69,6 +70,7 @@ import java.util.Locale
 import com.example.minimallauncher.core.model.AppInfo
 import com.example.minimallauncher.launcher.FavoriteAppsViewModel
 import com.example.minimallauncher.launcher.home.AppViewModel
+import androidx.compose.ui.platform.LocalLocale
 
 private data class DrawerPalette(
     val background: Color,
@@ -100,6 +102,7 @@ private val DarkDrawerPalette = DrawerPalette(
     favorite = Color(0xFFFFD166)
 )
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppDrawerScreen(
     viewModel: AppViewModel = viewModel(),
@@ -120,7 +123,7 @@ fun AppDrawerScreen(
     var selectedCategoryKey by remember { mutableStateOf<String?>(null) }
 
     val filteredApps = apps.filter { it.name.contains(searchQuery, ignoreCase = true) }
-    val locale = Locale.getDefault()
+    val locale = LocalLocale.current.platformLocale
     val collator = remember(locale) { Collator.getInstance(locale) }
     val categorizedApps = filteredApps.map { app -> categoryFor(context, app) to app }
     val groupedApps = categorizedApps
@@ -161,50 +164,12 @@ fun AppDrawerScreen(
                 .padding(top = 28.dp, bottom = 26.dp)
         ) {
             Text(
-                text = "Приложения",
-                color = palette.text,
-                fontSize = 30.sp,
-                lineHeight = 36.sp,
-                fontWeight = FontWeight.SemiBold,
-                letterSpacing = (-1.1).sp
-            )
-            Text(
                 text = "${filteredApps.size} ${appsPlural(filteredApps.size)} · ${groupedApps.size} категорий",
                 color = palette.secondaryText,
                 fontSize = 13.sp,
                 lineHeight = 18.sp,
                 modifier = Modifier.padding(top = 4.dp)
             )
-        }
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(30.dp),
-            verticalAlignment = Alignment.Top,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(
-                text = "ПО КАТЕГОРИЯМ",
-                color = palette.secondaryText,
-                fontSize = 11.sp,
-                lineHeight = 16.sp,
-                fontWeight = FontWeight.SemiBold,
-                letterSpacing = 1.sp
-            )
-            IconButton(
-                onClick = { sortByCount = !sortByCount },
-                modifier = Modifier
-                    .size(24.dp)
-                    .padding(top = 0.dp)
-            ) {
-                Image(
-                    painter = painterResource(android.R.drawable.ic_menu_sort_by_size),
-                    contentDescription = "Изменить порядок категорий",
-                    colorFilter = ColorFilter.tint(palette.secondaryText),
-                    modifier = Modifier.size(17.dp)
-                )
-            }
         }
 
         if (groupedApps.isEmpty()) {
@@ -225,7 +190,7 @@ fun AppDrawerScreen(
                 modifier = Modifier.weight(1f),
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 8.dp)
             ) {
-                items(groupedApps, key = { it.first.name }) { (category, categoryApps) ->
+                items(groupedApps, key = { it.first.label }) { (category, categoryApps) ->
                     CategoryRow(
                         category = category,
                         apps = categoryApps,
