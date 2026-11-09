@@ -76,10 +76,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.minimallauncher.core.model.AppInfo
 import com.example.minimallauncher.launcher.FavoriteAppsViewModel
 import com.example.minimallauncher.launcher.home.AppViewModel
-import androidx.compose.runtime.snapshotFlow
 import java.text.Collator
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 
 private data class DrawerPalette(
@@ -120,15 +117,15 @@ fun AppDrawerScreen(
 
     var searchQuery by remember { mutableStateOf("") }
     var searchFocused by remember { mutableStateOf(false) }
+    var searchImeWasVisible by remember { mutableStateOf(false) }
     var selectedCategoryKey by remember { mutableStateOf<String?>(null) }
+    val imeVisible = WindowInsets.isImeVisible
 
-    LaunchedEffect(searchFocused) {
-        if (searchFocused) {
-            snapshotFlow { WindowInsets.isImeVisible }
-                .drop(1)
-                .collect { imeVisible ->
-                    if (!imeVisible) focusManager.clearFocus()
-                }
+    LaunchedEffect(searchFocused, imeVisible) {
+        when {
+            !searchFocused -> searchImeWasVisible = false
+            imeVisible -> searchImeWasVisible = true
+            searchImeWasVisible -> focusManager.clearFocus()
         }
     }
 
