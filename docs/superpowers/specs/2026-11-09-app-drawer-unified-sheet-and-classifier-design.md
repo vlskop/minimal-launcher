@@ -7,8 +7,9 @@ Give the main AppDrawer the same modal, drag-to-dismiss behavior as category vie
 ## Goals
 
 - Present AppDrawer as a Material 3 modal bottom sheet, opened from Home by the existing upward gesture.
-- Use the sheet's native handle, downward drag, outside-tap scrim, and Back behavior to close it.
-- Keep category selection in the same sheet: tapping a category changes to its titled app grid; Back returns to the category list; dragging down or tapping outside closes the whole AppDrawer.
+- Use nested-scroll handoff for dismissal: when the drawer list is away from its top, a downward gesture scrolls the list toward the top; once at the top, a downward gesture moves the whole sheet with the finger and dismisses it when released past the sheet threshold. A shorter drag settles back to the expanded position.
+- Keep outside-tap and Back dismissal, and use a visible sheet handle as an additional drag target.
+- Keep category selection in the same sheet: tapping a category changes to its titled app grid; Back returns to the category list; category-grid scrolling follows the same top-of-content drag handoff; dragging down from the top or tapping outside closes the whole AppDrawer.
 - Animate sheet entry/exit with Material 3's bottom-sheet motion. Animate category-list/detail changes with a short slide-and-fade transition.
 - Prefer Android's localized `ApplicationInfo.category` title. For undefined categories, classify using tokenized app labels and package identifiers with weighted local rules and a confidence threshold.
 - Broaden fallback groups to cover common app functions (social, travel, media, finance, shopping, work, health, education, news, photos, food, system/utilities, and related categories); keep unresolved apps in `Без категории`.
@@ -29,11 +30,11 @@ Give the main AppDrawer the same modal, drag-to-dismiss behavior as category vie
 ## Layout and behavior
 
 - Keep the current AppDrawer visual layout and category rows.
-- The main sheet expands from the bottom when opened and dismisses using native sheet gestures, Back, or outside tap.
+- The main sheet expands from the bottom when opened and dismisses using nested-scroll handoff, Back, or outside tap. Do not require the user to start a dismissal drag on the handle.
 - Selecting a category shows a back affordance, the category name, and a scrollable adaptive app grid inside the same sheet. Back from this view returns to the category list; the sheet itself stays open.
-- Category view transitions use a 220 ms ease-in/out slide with a brief fade. Respect system animation scale.
+- Category list/detail changes use a 220 ms ease-in/out slide with a brief fade. Respect system animation scale; the sheet itself follows the finger during drag and settles using Material 3's sheet motion.
 - Category rows derive from the installed app set; Android-provided localized titles remain dynamic. Local inference adds broader fallback labels only when Android metadata is undefined.
-- Tokenization separates dotted package segments, underscores, dashes, digits, and label words; weighted matching favors specific multiword/brand terms over broad substrings. Below-threshold results go to `Без категории`.
+- Tokenization separates dotted package segments, underscores, dashes, digits, and label words; weighted matching uses a broader set of category synonyms and app-name/package tokens, favors specific multiword/brand terms over broad substrings, and resolves overlap by score. Below-threshold results go to `Без категории`.
 
 ## Constraints and implementation calls
 
@@ -45,7 +46,7 @@ Give the main AppDrawer the same modal, drag-to-dismiss behavior as category vie
 
 ## Verification
 
-- Manually inspect swipe-up opening; native sheet drag, outside tap, and Back dismissal; category selection and Back return; grid scrolling and app launch.
+- Manually inspect swipe-up opening; downward list scroll away from top; finger-following sheet dismissal at top; short drag settling; outside-tap and Back dismissal; category selection and Back return; grid scrolling handoff and app launch.
 - Review classifier behavior for defined Android categories, each fallback group, overlapping keyword matches, package-token boundaries, and the confidence fallback.
 - Do not build or run tests in this task; the user will build the app.
 

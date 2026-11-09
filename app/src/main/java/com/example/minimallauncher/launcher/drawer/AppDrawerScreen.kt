@@ -1,10 +1,19 @@
 package com.example.minimallauncher.launcher.drawer
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.FastOutLinearInEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.indication
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -13,20 +22,20 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -34,8 +43,8 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -50,27 +59,25 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.viewmodel.compose.viewModel
-import java.text.Collator
-import java.util.Locale
 import com.example.minimallauncher.core.model.AppInfo
 import com.example.minimallauncher.launcher.FavoriteAppsViewModel
 import com.example.minimallauncher.launcher.home.AppViewModel
-import androidx.compose.ui.platform.LocalLocale
+import java.text.Collator
 
 private data class DrawerPalette(
     val background: Color,
@@ -106,12 +113,13 @@ private val DarkDrawerPalette = DrawerPalette(
 @Composable
 fun AppDrawerScreen(
     viewModel: AppViewModel = viewModel(),
-    onClose: () -> Unit = {}
+    onClose: () -> Unit
 ) {
     val apps by viewModel.apps.collectAsState()
     val favoriteViewModel: FavoriteAppsViewModel = viewModel()
     val favorites by favoriteViewModel.favorites.collectAsState()
     val context = LocalContext.current
+    val locale = LocalLocale.current.platformLocale
     val palette = if (MaterialTheme.colorScheme.background.luminance() < 0.5f) {
         DarkDrawerPalette
     } else {
@@ -121,50 +129,142 @@ fun AppDrawerScreen(
     var searchQuery by remember { mutableStateOf("") }
     var sortByCount by remember { mutableStateOf(false) }
     var selectedCategoryKey by remember { mutableStateOf<String?>(null) }
+    val categoryListState = rememberLazyListState()
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    val filteredApps = apps.filter { it.name.contains(searchQuery, ignoreCase = true) }
-    val locale = LocalLocale.current.platformLocale
+    val categorizedApps = remember(apps, context, locale) {
+        apps.map { app -> categoryFor(context, app) to app }
+    }
+    val filteredApps = categorizedApps.filter { (_, app) ->
+        app.name.contains(searchQuery, ignoreCase = true)
+    }
     val collator = remember(locale) { Collator.getInstance(locale) }
-    val categorizedApps = filteredApps.map { app -> categoryFor(context, app) to app }
-    val groupedApps = categorizedApps
+    val groupedApps = filteredApps
         .groupBy { (category, _) -> category.label.normalizedCategoryKey(locale) }
         .values
-        .map { grouped -> grouped.first().first to grouped.map { it.second } }
-        .sortedWith { first, second -> collator.compare(first.first.label, second.first.label) }
+        .map { group -> group.first().first to group.map { it.second } }
+        .sortedWith { left, right -> collator.compare(left.first.label, right.first.label) }
         .let { groups ->
             if (sortByCount) groups.sortedByDescending { it.second.size } else groups
         }
-    val selectedGroup = groupedApps.firstOrNull { (category, _) ->
-        category.label.normalizedCategoryKey(locale) == selectedCategoryKey
-    }
+    ModalBottomSheet(
+        onDismissRequest = onClose,
+        sheetState = sheetState,
+        containerColor = palette.background,
+        contentColor = palette.text
+    ) {
+        BackHandler(enabled = selectedCategoryKey != null) {
+            selectedCategoryKey = null
+        }
 
+        AnimatedContent(
+            targetState = selectedCategoryKey,
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(),
+            transitionSpec = {
+                val entering = slideInHorizontally(
+                    initialOffsetX = { width -> if (targetState == null) -width / 12 else width / 12 },
+                    animationSpec = tween(220, easing = LinearOutSlowInEasing)
+                ) + fadeIn(animationSpec = tween(160))
+                val exiting = slideOutHorizontally(
+                    targetOffsetX = { width -> if (targetState == null) width / 12 else -width / 12 },
+                    animationSpec = tween(180, easing = FastOutLinearInEasing)
+                ) + fadeOut(animationSpec = tween(120))
+                entering togetherWith exiting
+            },
+            label = "AppDrawer content"
+        ) { targetCategoryKey ->
+            val group = groupedApps.firstOrNull { (category, _) ->
+                category.label.normalizedCategoryKey(locale) == targetCategoryKey
+            }
+
+            if (targetCategoryKey != null && group != null) {
+                CategoryAppsSheet(
+                    category = group.first,
+                    apps = group.second,
+                    favorites = favorites,
+                    palette = palette,
+                    onBack = { selectedCategoryKey = null },
+                    onLaunch = { app ->
+                        onClose()
+                        context.packageManager.getLaunchIntentForPackage(app.packageName)
+                            ?.let(context::startActivity)
+                    },
+                    onToggleFavorite = favoriteViewModel::toggleFavorite
+                )
+            } else {
+                DrawerCategoriesContent(
+                    appsCount = filteredApps.size,
+                    groups = groupedApps,
+                    favorites = favorites,
+                    searchQuery = searchQuery,
+                    onSearchQueryChange = { searchQuery = it },
+                    onClearSearch = { searchQuery = "" },
+                    sortByCount = sortByCount,
+                    onToggleSort = { sortByCount = !sortByCount },
+                    listState = categoryListState,
+                    palette = palette,
+                    onOpenCategory = { category ->
+                        selectedCategoryKey = category.label.normalizedCategoryKey(locale)
+                    },
+                    onLaunch = { app ->
+                        onClose()
+                        context.packageManager.getLaunchIntentForPackage(app.packageName)
+                            ?.let(context::startActivity)
+                    },
+                    onToggleFavorite = favoriteViewModel::toggleFavorite
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DrawerCategoriesContent(
+    appsCount: Int,
+    groups: List<Pair<AppCategory, List<AppInfo>>>,
+    favorites: List<String>,
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
+    onClearSearch: () -> Unit,
+    sortByCount: Boolean,
+    onToggleSort: () -> Unit,
+    listState: LazyListState,
+    palette: DrawerPalette,
+    onOpenCategory: (AppCategory) -> Unit,
+    onLaunch: (AppInfo) -> Unit,
+    onToggleFavorite: (String) -> Unit
+) {
     Column(
         modifier = Modifier
-            .fillMaxSize()
-            .background(palette.background)
-            .statusBarsPadding()
-            .navigationBarsPadding()
+            .fillMaxWidth()
+            .fillMaxHeight()
             .padding(horizontal = 24.dp)
     ) {
-        DrawerHandle(
-            palette = palette,
-            onClose = onClose
-        )
         AppSearchField(
             value = searchQuery,
-            onValueChange = { searchQuery = it },
-            onClear = { searchQuery = "" },
+            onValueChange = onSearchQueryChange,
+            onClear = onClearSearch,
             palette = palette,
-            modifier = Modifier
+            modifier = Modifier.padding(top = 4.dp)
         )
 
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 28.dp, bottom = 26.dp)
+                .padding(top = 24.dp, bottom = 18.dp)
         ) {
             Text(
-                text = "${filteredApps.size} ${appsPlural(filteredApps.size)} · ${groupedApps.size} категорий",
+                text = "Приложения",
+                color = palette.text,
+                fontSize = 30.sp,
+                lineHeight = 36.sp,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = (-1.1).sp
+            )
+            Text(
+                text = "$appsCount ${appsPlural(appsCount)} · ${groups.size} категорий",
                 color = palette.secondaryText,
                 fontSize = 13.sp,
                 lineHeight = 18.sp,
@@ -172,7 +272,32 @@ fun AppDrawerScreen(
             )
         }
 
-        if (groupedApps.isEmpty()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(30.dp),
+            verticalAlignment = Alignment.Top,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = "ПО КАТЕГОРИЯМ",
+                color = palette.secondaryText,
+                fontSize = 11.sp,
+                lineHeight = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = 1.sp
+            )
+            IconButton(onClick = onToggleSort, modifier = Modifier.size(24.dp)) {
+                Image(
+                    painter = painterResource(android.R.drawable.ic_menu_sort_by_size),
+                    contentDescription = if (sortByCount) "Сортировать по категориям" else "Сортировать по количеству",
+                    colorFilter = ColorFilter.tint(palette.secondaryText),
+                    modifier = Modifier.size(17.dp)
+                )
+            }
+        }
+
+        if (groups.isEmpty()) {
             Box(
                 modifier = Modifier
                     .weight(1f)
@@ -187,21 +312,19 @@ fun AppDrawerScreen(
             }
         } else {
             LazyColumn(
+                state = listState,
                 modifier = Modifier.weight(1f),
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 8.dp)
             ) {
-                items(groupedApps, key = { it.first.label }) { (category, categoryApps) ->
+                items(groups, key = { it.first.label }) { (category, categoryApps) ->
                     CategoryRow(
                         category = category,
                         apps = categoryApps,
                         favorites = favorites,
                         palette = palette,
-                        onClick = { selectedCategoryKey = category.label.normalizedCategoryKey(locale) },
-                        onLaunch = { app ->
-                            context.packageManager.getLaunchIntentForPackage(app.packageName)
-                                ?.let(context::startActivity)
-                        },
-                        onToggleFavorite = favoriteViewModel::toggleFavorite
+                        onClick = { onOpenCategory(category) },
+                        onLaunch = onLaunch,
+                        onToggleFavorite = onToggleFavorite
                     )
                 }
             }
@@ -223,65 +346,6 @@ fun AppDrawerScreen(
                 overflow = TextOverflow.Ellipsis
             )
         }
-    }
-
-    if (selectedGroup != null) {
-        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-        ModalBottomSheet(
-            onDismissRequest = { selectedCategoryKey = null },
-            sheetState = sheetState,
-            containerColor = palette.background,
-            contentColor = palette.text
-        ) {
-            CategoryAppsSheet(
-                category = selectedGroup.first,
-                apps = selectedGroup.second,
-                favorites = favorites,
-                palette = palette,
-                onLaunch = { app ->
-                    selectedCategoryKey = null
-                    context.packageManager.getLaunchIntentForPackage(app.packageName)
-                        ?.let(context::startActivity)
-                },
-                onToggleFavorite = favoriteViewModel::toggleFavorite
-            )
-        }
-    }
-}
-
-@Composable
-private fun DrawerHandle(
-    palette: DrawerPalette,
-    onClose: () -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(44.dp)
-            .semantics { contentDescription = "Закрыть список приложений" }
-            .clickable(role = Role.Button, onClick = onClose)
-            .pointerInput(onClose) {
-                var dragDistance = 0f
-                detectVerticalDragGestures(
-                    onDragStart = { dragDistance = 0f },
-                    onVerticalDrag = { change, dragAmount ->
-                        dragDistance += dragAmount
-                        change.consume()
-                    },
-                    onDragEnd = {
-                        if (dragDistance >= 72.dp.toPx()) onClose()
-                    }
-                )
-            },
-        contentAlignment = Alignment.Center
-    ) {
-        Box(
-            modifier = Modifier
-                .width(36.dp)
-                .height(4.dp)
-                .clip(CircleShape)
-                .background(palette.secondaryText.copy(alpha = 0.55f))
-        )
     }
 }
 
@@ -313,11 +377,7 @@ private fun AppSearchField(
             value = value,
             onValueChange = onValueChange,
             singleLine = true,
-            textStyle = TextStyle(
-                color = palette.text,
-                fontSize = 15.sp,
-                lineHeight = 20.sp
-            ),
+            textStyle = TextStyle(color = palette.text, fontSize = 15.sp, lineHeight = 20.sp),
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
             decorationBox = { innerTextField ->
                 Box(Modifier.fillMaxWidth()) {
@@ -418,7 +478,6 @@ private fun CategoryRow(
                 modifier = Modifier.width(14.dp)
             )
         }
-
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -434,29 +493,52 @@ private fun CategoryAppsSheet(
     apps: List<AppInfo>,
     favorites: List<String>,
     palette: DrawerPalette,
+    onBack: () -> Unit,
     onLaunch: (AppInfo) -> Unit,
     onToggleFavorite: (String) -> Unit
 ) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .fillMaxHeight()
             .padding(horizontal = 24.dp)
-            .padding(bottom = 24.dp)
     ) {
-        Text(
-            text = category.label,
-            color = palette.text,
-            fontSize = 24.sp,
-            lineHeight = 30.sp,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.padding(bottom = 20.dp)
-        )
-        LazyVerticalGrid(
-            columns = GridCells.Adaptive(minSize = 72.dp),
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = 120.dp, max = 520.dp),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 12.dp),
+                .height(56.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(
+                onClick = onBack,
+                modifier = Modifier
+                    .size(48.dp)
+                    .semantics { contentDescription = "Назад к категориям" }
+            ) {
+                Text("‹", color = palette.text, fontSize = 32.sp, lineHeight = 36.sp)
+            }
+            Text(
+                text = category.label,
+                color = palette.text,
+                fontSize = 24.sp,
+                lineHeight = 30.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+
+        Text(
+            text = "${apps.size} ${appsPlural(apps.size)}",
+            color = palette.secondaryText,
+            fontSize = 13.sp,
+            modifier = Modifier.padding(start = 8.dp, bottom = 16.dp)
+        )
+
+        LazyVerticalGrid(
+            columns = GridCells.Adaptive(minSize = 72.dp),
+            modifier = Modifier.weight(1f),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 24.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
@@ -544,7 +626,7 @@ private fun appsPlural(count: Int): String = when {
     else -> "приложений"
 }
 
-private fun String.normalizedCategoryKey(locale: Locale): String =
+private fun String.normalizedCategoryKey(locale: java.util.Locale): String =
     trim().lowercase(locale)
 
 private fun Color.luminance(): Float =

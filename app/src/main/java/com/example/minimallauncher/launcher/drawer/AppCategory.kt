@@ -7,54 +7,91 @@ import java.util.Locale
 
 data class AppCategory(val label: String)
 
-private data class CategoryRule(
-    val label: String,
-    val terms: List<String>
+private data class CategoryTerm(
+    val value: String,
+    val weight: Int = 4
 )
 
-private val fallbackCategoryRules = listOf(
-    CategoryRule(
-        label = "Соцсети",
-        terms = listOf(
-            "telegram", "whatsapp", "vkontakte", "vk.com", "instagram", "facebook",
-            "messenger", "snapchat", "discord", "reddit", "tiktok", "соцсеть", "однокласс"
-        )
-    ),
-    CategoryRule(
-        label = "Путешествия",
-        terms = listOf(
-            "maps", "map.", "карты", "2gis", "2гис", "uber", "taxi", "такси", "travel",
-            "trip", "booking", "airbnb", "авиа", "поезд", "навигац"
-        )
-    ),
-    CategoryRule(
-        label = "Развлечения",
-        terms = listOf(
-            "youtube", "spotify", "netflix", "kinopoisk", "кино", "музык", "видео",
-            "игр", "game", "music", "media", "twitch", "развлеч"
-        )
-    ),
-    CategoryRule(
-        label = "Финансы",
-        terms = listOf(
-            "bank", "finance", "wallet", "pay", "сбер", "банк", "финанс", "т-банк",
-            "тинькофф", "альфа", "втб", "мир"
-        )
-    ),
-    CategoryRule(
-        label = "Покупки",
-        terms = listOf(
-            "ozon", "wildberries", "market", "shopping", "shop", "store", "amazon",
-            "aliexpress", "покуп", "магазин", "маркет", "wb"
-        )
-    ),
-    CategoryRule(
-        label = "Работа",
-        terms = listOf(
-            "gmail", "outlook", "mail", "почта", "office", "docs", "drive", "диск",
-            "calendar", "календар", "zoom", "teams", "slack", "notion", "рабоч", "business"
-        )
-    )
+private data class CategoryRule(
+    val label: String,
+    val terms: List<CategoryTerm>
+)
+
+private fun terms(vararg values: String) = values.map { CategoryTerm(it) }
+
+private val categoryRules = listOf(
+    CategoryRule("Соцсети", terms(
+        "telegram", "whatsapp", "vkontakte", "vk", "instagram", "facebook", "messenger",
+        "snapchat", "discord", "reddit", "tiktok", "threads", "wechat", "signal",
+        "social", "chat", "community", "dating", "forum", "соцсет", "мессендж",
+        "переписк", "однокласс", "знакомств", "общени"
+    )),
+    CategoryRule("Путешествия", terms(
+        "google maps", "yandex maps", "maps", "navigation", "navigator", "travel", "trip",
+        "booking", "airbnb", "uber", "taxi", "flight", "transit", "railway", "maps",
+        "карты", "навигац", "путеше", "авиа", "отел", "поезд", "такси", "транспорт",
+        "билет", "метро", "вокзал", "аэропорт", "каршеринг"
+    )),
+    CategoryRule("Развлечения", terms(
+        "youtube", "spotify", "netflix", "twitch", "kinopoisk", "ivi", "okko", "music",
+        "video", "movie", "cinema", "streaming", "podcast", "radio", "game", "игр",
+        "кино", "музык", "видео", "стрим", "подкаст", "радио", "игров", "тв"
+    )),
+    CategoryRule("Финансы", terms(
+        "banking", "bank", "finance", "fintech", "wallet", "payment", "pay", "credit",
+        "loan", "investment", "trading", "tax", "insurance", "crypto", "sber", "tinkoff",
+        "alfabank", "vtb", "сбер", "банк", "финанс", "кошелек", "оплат", "платеж",
+        "кредит", "налог", "инвест", "страхован", "перевод", "брокер", "акци", "валют"
+    )),
+    CategoryRule("Покупки", terms(
+        "shopping", "shop", "store", "marketplace", "commerce", "retail", "ozon",
+        "wildberries", "aliexpress", "amazon", "ebay", "market", "покуп", "магазин",
+        "маркет", "торгов", "заказ", "скидк", "купон", "каталог"
+    )),
+    CategoryRule("Работа", terms(
+        "microsoft teams", "google docs", "google drive", "office", "productivity", "work",
+        "business", "enterprise", "gmail", "outlook", "mail", "email", "calendar", "docs",
+        "drive", "slack", "zoom", "notion", "asana", "trello", "jira", "crm", "meeting",
+        "task", "cloud", "file manager", "почта", "календар", "документ", "рабоч",
+        "офис", "задач", "облак", "файл", "встреч", "заметк", "таблиц", "презентац"
+    )),
+    CategoryRule("Здоровье и спорт", terms(
+        "health", "healthcare", "medical", "medicine", "doctor", "clinic", "pharmacy",
+        "fitness", "workout", "gym", "exercise", "running", "health connect", "fitbit",
+        "strava", "health", "здоров", "медицин", "врач", "клиник", "аптек", "лекарств",
+        "фитнес", "трениров", "спорт", "бег"
+    )),
+    CategoryRule("Образование", terms(
+        "education", "educational", "learning", "learn", "study", "school", "university",
+        "student", "course", "language", "dictionary", "translate", "duolingo", "образован",
+        "обучен", "учеб", "школ", "студент", "курс", "урок", "язык", "словар", "перевод"
+    )),
+    CategoryRule("Новости", terms(
+        "news", "newspaper", "journalism", "magazine", "rss", "newsstand", "новост",
+        "газет", "журнал", "сми", "лента новостей"
+    )),
+    CategoryRule("Фото и видео", terms(
+        "camera", "gallery", "photos", "photo", "photography", "image editor", "image",
+        "picture", "scanner", "screenshot", "camera", "камера", "галере", "фото", "снимок",
+        "изображ", "редактор", "сканер"
+    )),
+    CategoryRule("Еда и доставка", terms(
+        "food delivery", "food", "restaurant", "grocery", "recipe", "cafe", "doordash",
+        "ubereats", "delivery", "restaurant", "еда", "ресторан", "продукт", "рецепт",
+        "кафе", "доставк", "меню"
+    )),
+    CategoryRule("Книги и чтение", terms(
+        "ebook", "e-book", "reader", "audiobook", "kindle", "literature", "book",
+        "книг", "читал", "чтение", "аудиокниг", "библиотек", "литератур"
+    )),
+    CategoryRule("Инструменты", terms(
+        "settings", "calculator", "converter", "flashlight", "utility", "utilities", "toolbox",
+        "launcher", "file manager", "device care", "cleaner", "weather", "clock", "alarm",
+        "recorder", "system", "backup", "bluetooth", "files", "фонар", "калькулятор",
+        "конвертер", "настройк", "погода", "часы", "будиль", "диктофон", "система",
+        "резервн", "очистк", "инструмент", "память", "qr", "скриншот", "vpn",
+        "безопасност", "аккумулятор", "батаре", "подключен"
+    ))
 )
 
 fun categoryFor(context: Context, app: AppInfo): AppCategory {
@@ -66,10 +103,48 @@ fun categoryFor(context: Context, app: AppInfo): AppCategory {
             ?.let { return AppCategory(it) }
     }
 
-    val appIdentity = "${app.name} ${app.packageName}".lowercase(Locale.ROOT)
-    val inferredLabel = fallbackCategoryRules.firstOrNull { rule ->
-        rule.terms.any(appIdentity::contains)
-    }?.label
+    val words = appIdentityWords(app)
+    val ranked = categoryRules
+        .map { rule -> rule to rule.score(words) }
+        .filter { (_, score) -> score > 0 }
+        .sortedByDescending { it.second }
+    val best = ranked.firstOrNull()
+    val runnerUpScore = ranked.getOrNull(1)?.second ?: 0
 
-    return AppCategory(inferredLabel ?: "Без категории")
+    return if (best != null && best.second >= 3 && best.second - runnerUpScore >= 2) {
+        AppCategory(best.first.label)
+    } else {
+        AppCategory("Без категории")
+    }
+}
+
+private fun appIdentityWords(app: AppInfo): Set<String> {
+    val original = "${app.name} ${app.packageName}"
+    val camelSeparated = original.replace(Regex("([\\p{Ll}])([\\p{Lu}])"), "$1 $2")
+    val normalized = "$original $camelSeparated"
+        .lowercase(Locale.ROOT)
+        .replace('ё', 'е')
+        .replace(Regex("[^\\p{L}\\p{N}]+"), " ")
+        .trim()
+
+    return normalized.split(Regex("\\s+")).filter(String::isNotBlank).toSet()
+}
+
+private fun CategoryRule.score(words: Set<String>): Int {
+    val matchedWeights = terms.mapNotNull { term ->
+        val termWords = term.value.lowercase(Locale.ROOT).replace('ё', 'е')
+            .split(Regex("[^\\p{L}\\p{N}]+"))
+            .filter(String::isNotBlank)
+
+        val matched = when {
+            termWords.size > 1 && termWords.all(words::contains) -> term.weight + 2
+            termWords.size == 1 && termWords.first() in words -> term.weight
+            termWords.size == 1 && termWords.first().length >= 5 &&
+                words.any { it.startsWith(termWords.first()) } -> term.weight - 1
+            else -> 0
+        }
+        matched.takeIf { it > 0 }
+    }.distinct().sortedDescending()
+
+    return matchedWeights.firstOrNull()?.plus(matchedWeights.drop(1).take(2).sumOf { 1 }) ?: 0
 }

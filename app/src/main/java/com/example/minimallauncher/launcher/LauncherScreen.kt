@@ -1,11 +1,5 @@
 package com.example.minimallauncher.launcher
 
-import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.ui.Modifier
@@ -29,10 +23,6 @@ import android.content.IntentFilter
 import androidx.core.content.ContextCompat
 import androidx.compose.ui.platform.LocalContext
 import android.content.Context
-import androidx.compose.animation.core.FastOutLinearInEasing
-import androidx.compose.animation.core.LinearOutSlowInEasing
-import androidx.compose.animation.core.tween
-import androidx.compose.ui.Alignment
 
 @Composable
 fun LauncherScreen() {
@@ -95,10 +85,6 @@ fun LauncherScreen() {
             lifecycleOwner.lifecycle.removeObserver(observer)
         }
     }
-    BackHandler(enabled = isDrawerOpen) {
-        isDrawerOpen = false
-    }
-
     val homeSwipeModifier = if (isDrawerOpen) {
         Modifier
     } else {
@@ -137,21 +123,7 @@ fun LauncherScreen() {
             .then(homeSwipeModifier)
     ) {
         HomeScreen(appViewModel = appViewModel)
-
-        AnimatedVisibility(
-            visible = isDrawerOpen,
-            modifier = Modifier
-                .fillMaxSize()
-                .align(Alignment.BottomCenter),
-            enter = slideInVertically(
-                initialOffsetY = { it },
-                animationSpec = tween(280, easing = LinearOutSlowInEasing)
-            ) + fadeIn(animationSpec = tween(180)),
-            exit = slideOutVertically(
-                targetOffsetY = { it },
-                animationSpec = tween(220, easing = FastOutLinearInEasing)
-            ) + fadeOut(animationSpec = tween(140))
-        ) {
+        if (isDrawerOpen) {
             AppDrawerScreen(
                 viewModel = appViewModel,
                 onClose = { isDrawerOpen = false }
