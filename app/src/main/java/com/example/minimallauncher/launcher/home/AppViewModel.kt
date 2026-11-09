@@ -18,10 +18,9 @@ class AppViewModel(application: Application) : AndroidViewModel(application){
     val apps: StateFlow<List<AppInfo>> = _apps.asStateFlow()
 
     init {
-        loadApps()
+        refreshApps()
     }
-
-    private fun loadApps() {
+    fun refreshApps() {
         viewModelScope.launch {
             _apps.value = withContext(Dispatchers.IO) {
                 repository.getInstalledApps()

@@ -12,11 +12,31 @@ import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.runtime.*
 import com.example.minimallauncher.launcher.drawer.AppDrawerScreen
 import com.example.minimallauncher.launcher.home.HomeScreen
-
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.runtime.DisposableEffect
+import com.example.minimallauncher.launcher.home.AppViewModel
 @Composable
 fun LauncherScreen() {
     var isDrawerOpen by remember { mutableStateOf(false) }
+    val appViewModel: AppViewModel = viewModel()
+    val lifecycleOwner = LocalLifecycleOwner.current
 
+    DisposableEffect(lifecycleOwner, appViewModel) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                appViewModel.refreshApps()
+            }
+        }
+
+        lifecycleOwner.lifecycle.addObserver(observer)
+
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
     BackHandler(enabled = isDrawerOpen) {
         isDrawerOpen = false
     }
@@ -55,9 +75,9 @@ fun LauncherScreen() {
             }
     ) {
         if (isDrawerOpen) {
-            AppDrawerScreen()
+            AppDrawerScreen(viewModel = appViewModel)
         } else {
-            HomeScreen()
+            HomeScreen(appViewModel = appViewModel)
         }
     }
 

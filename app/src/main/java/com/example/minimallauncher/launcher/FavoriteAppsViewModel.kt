@@ -31,4 +31,25 @@ class FavoriteAppsViewModel(
         _favorites.value = updatedFavorites
         repository.saveFavorites(updatedFavorites)
     }
+
+    fun moveFavorite(fromIndex: Int, toIndex: Int) {
+        val currentFavorites = _favorites.value
+
+        if (fromIndex !in currentFavorites.indices ||
+            toIndex !in currentFavorites.indices
+            ){
+            return
+        }
+        if (fromIndex == toIndex) {
+            return
+        }
+
+        val updatedFavorites = currentFavorites.toMutableList()
+        val movedApp = updatedFavorites.removeAt(fromIndex)
+        updatedFavorites.add(toIndex, movedApp)
+
+        _favorites.value = updatedFavorites
+        repository.saveFavorites(updatedFavorites)
+
+    }
 }
