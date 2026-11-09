@@ -1,15 +1,5 @@
 package com.example.minimallauncher.launcher.drawer
 
-import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.togetherWith
-import androidx.compose.animation.core.FastOutLinearInEasing
-import androidx.compose.animation.core.LinearOutSlowInEasing
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -26,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -63,8 +54,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -147,75 +136,59 @@ fun AppDrawerScreen(
         .let { groups ->
             if (sortByCount) groups.sortedByDescending { it.second.size } else groups
         }
+    val selectedGroup = groupedApps.firstOrNull { (category, _) ->
+        category.label.normalizedCategoryKey(locale) == selectedCategoryKey
+    }
+
     ModalBottomSheet(
         onDismissRequest = onClose,
         sheetState = sheetState,
         containerColor = palette.background,
         contentColor = palette.text
     ) {
-        BackHandler(enabled = selectedCategoryKey != null) {
-            selectedCategoryKey = null
-        }
-
-        AnimatedContent(
-            targetState = selectedCategoryKey,
-            modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight(),
-            transitionSpec = {
-                val entering = slideInHorizontally(
-                    initialOffsetX = { width -> if (targetState == null) -width / 12 else width / 12 },
-                    animationSpec = tween(220, easing = LinearOutSlowInEasing)
-                ) + fadeIn(animationSpec = tween(160))
-                val exiting = slideOutHorizontally(
-                    targetOffsetX = { width -> if (targetState == null) width / 12 else -width / 12 },
-                    animationSpec = tween(180, easing = FastOutLinearInEasing)
-                ) + fadeOut(animationSpec = tween(120))
-                entering togetherWith exiting
+        DrawerCategoriesContent(
+            appsCount = filteredApps.size,
+            groups = groupedApps,
+            favorites = favorites,
+            searchQuery = searchQuery,
+            onSearchQueryChange = { searchQuery = it },
+            onClearSearch = { searchQuery = "" },
+            sortByCount = sortByCount,
+            onToggleSort = { sortByCount = !sortByCount },
+            listState = categoryListState,
+            palette = palette,
+            onOpenCategory = { category ->
+                selectedCategoryKey = category.label.normalizedCategoryKey(locale)
             },
-            label = "AppDrawer content"
-        ) { targetCategoryKey ->
-            val group = groupedApps.firstOrNull { (category, _) ->
-                category.label.normalizedCategoryKey(locale) == targetCategoryKey
-            }
+            onLaunch = { app ->
+                onClose()
+                context.packageManager.getLaunchIntentForPackage(app.packageName)
+                    ?.let(context::startActivity)
+            },
+            onToggleFavorite = favoriteViewModel::toggleFavorite
+        )
+    }
 
-            if (targetCategoryKey != null && group != null) {
-                CategoryAppsSheet(
-                    category = group.first,
-                    apps = group.second,
-                    favorites = favorites,
-                    palette = palette,
-                    onBack = { selectedCategoryKey = null },
-                    onLaunch = { app ->
-                        onClose()
-                        context.packageManager.getLaunchIntentForPackage(app.packageName)
-                            ?.let(context::startActivity)
-                    },
-                    onToggleFavorite = favoriteViewModel::toggleFavorite
-                )
-            } else {
-                DrawerCategoriesContent(
-                    appsCount = filteredApps.size,
-                    groups = groupedApps,
-                    favorites = favorites,
-                    searchQuery = searchQuery,
-                    onSearchQueryChange = { searchQuery = it },
-                    onClearSearch = { searchQuery = "" },
-                    sortByCount = sortByCount,
-                    onToggleSort = { sortByCount = !sortByCount },
-                    listState = categoryListState,
-                    palette = palette,
-                    onOpenCategory = { category ->
-                        selectedCategoryKey = category.label.normalizedCategoryKey(locale)
-                    },
-                    onLaunch = { app ->
-                        onClose()
-                        context.packageManager.getLaunchIntentForPackage(app.packageName)
-                            ?.let(context::startActivity)
-                    },
-                    onToggleFavorite = favoriteViewModel::toggleFavorite
-                )
-            }
+    if (selectedGroup != null) {
+        val categorySheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        ModalBottomSheet(
+            onDismissRequest = { selectedCategoryKey = null },
+            sheetState = categorySheetState,
+            containerColor = palette.background,
+            contentColor = palette.text
+        ) {
+            CategoryAppsSheet(
+                category = selectedGroup.first,
+                apps = selectedGroup.second,
+                favorites = favorites,
+                palette = palette,
+                onLaunch = { app ->
+                    selectedCategoryKey = null
+                    context.packageManager.getLaunchIntentForPackage(app.packageName)
+                        ?.let(context::startActivity)
+                },
+                onToggleFavorite = favoriteViewModel::toggleFavorite
+            )
         }
     }
 }
@@ -493,52 +466,29 @@ private fun CategoryAppsSheet(
     apps: List<AppInfo>,
     favorites: List<String>,
     palette: DrawerPalette,
-    onBack: () -> Unit,
     onLaunch: (AppInfo) -> Unit,
     onToggleFavorite: (String) -> Unit
 ) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .fillMaxHeight()
             .padding(horizontal = 24.dp)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(
-                onClick = onBack,
-                modifier = Modifier
-                    .size(48.dp)
-                    .semantics { contentDescription = "Назад к категориям" }
-            ) {
-                Text("‹", color = palette.text, fontSize = 32.sp, lineHeight = 36.sp)
-            }
-            Text(
-                text = category.label,
-                color = palette.text,
-                fontSize = 24.sp,
-                lineHeight = 30.sp,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-
         Text(
-            text = "${apps.size} ${appsPlural(apps.size)}",
-            color = palette.secondaryText,
-            fontSize = 13.sp,
-            modifier = Modifier.padding(start = 8.dp, bottom = 16.dp)
+            text = category.label,
+            color = palette.text,
+            fontSize = 24.sp,
+            lineHeight = 30.sp,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(bottom = 20.dp)
         )
 
         LazyVerticalGrid(
             columns = GridCells.Adaptive(minSize = 72.dp),
-            modifier = Modifier.weight(1f),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 24.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 120.dp, max = 520.dp),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {

@@ -9,7 +9,11 @@ data class AppCategory(val label: String)
 
 private data class CategoryTerm(
     val value: String,
-    val weight: Int = 4
+    val weight: Int = 4,
+    val words: List<String> = value.lowercase(Locale.ROOT)
+        .replace('ё', 'е')
+        .split(Regex("[^\\p{L}\\p{N}]+"))
+        .filter(String::isNotBlank)
 )
 
 private data class CategoryRule(
@@ -132,15 +136,11 @@ private fun appIdentityWords(app: AppInfo): Set<String> {
 
 private fun CategoryRule.score(words: Set<String>): Int {
     val matchedWeights = terms.mapNotNull { term ->
-        val termWords = term.value.lowercase(Locale.ROOT).replace('ё', 'е')
-            .split(Regex("[^\\p{L}\\p{N}]+"))
-            .filter(String::isNotBlank)
-
         val matched = when {
-            termWords.size > 1 && termWords.all(words::contains) -> term.weight + 2
-            termWords.size == 1 && termWords.first() in words -> term.weight
-            termWords.size == 1 && termWords.first().length >= 5 &&
-                words.any { it.startsWith(termWords.first()) } -> term.weight - 1
+            term.words.size > 1 && term.words.all(words::contains) -> term.weight + 2
+            term.words.size == 1 && term.words.first() in words -> term.weight
+            term.words.size == 1 && term.words.first().length >= 5 &&
+                words.any { it.startsWith(term.words.first()) } -> term.weight - 1
             else -> 0
         }
         matched.takeIf { it > 0 }
