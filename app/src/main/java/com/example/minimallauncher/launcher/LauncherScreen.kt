@@ -51,7 +51,7 @@ fun LauncherScreen() {
     val drawerHeightPx = with(density) { configuration.screenHeightDp.dp.toPx() }
     val baseGestureThresholdPx = minOf(drawerHeightPx * 0.22f, with(density) { 160.dp.toPx() })
     val openThresholdPx = baseGestureThresholdPx / 16f
-    val closeThresholdPx = minOf(drawerHeightPx * 0.18f, with(density) { 160.dp.toPx() })
+    val closeThresholdPx = minOf(drawerHeightPx * 0.16f, with(density) { 160.dp.toPx() })
     val drawerOffset = remember { mutableFloatStateOf(drawerHeightPx) }
     val drawerListState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()

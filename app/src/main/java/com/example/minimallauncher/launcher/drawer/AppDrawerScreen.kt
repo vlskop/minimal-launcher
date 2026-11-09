@@ -153,14 +153,14 @@ fun AppDrawerScreen(
         Column(
             modifier = modifier
                 .fillMaxSize()
-                .background(palette.background)
-                .statusBarsPadding()
-                .navigationBarsPadding()
                 .graphicsLayer {
                     val opaqueStartOffset = drawerHeightPx * (2f / 3f)
                     alpha = ((opaqueStartOffset - drawerOffset.value) / opaqueStartOffset)
                         .coerceIn(0f, 1f)
                 }
+                .background(palette.background)
+                .statusBarsPadding()
+                .navigationBarsPadding()
         ) {
             Box(
                 modifier = Modifier
