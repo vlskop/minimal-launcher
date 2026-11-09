@@ -157,7 +157,9 @@ fun AppDrawerScreen(
                 .statusBarsPadding()
                 .navigationBarsPadding()
                 .graphicsLayer {
-                    alpha = (1f - drawerOffset.value / drawerHeightPx).coerceIn(0f, 1f)
+                    val opaqueStartOffset = drawerHeightPx * (2f / 3f)
+                    alpha = ((opaqueStartOffset - drawerOffset.value) / opaqueStartOffset)
+                        .coerceIn(0f, 1f)
                 }
         ) {
             Box(

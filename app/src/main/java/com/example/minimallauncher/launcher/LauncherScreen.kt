@@ -50,7 +50,8 @@ fun LauncherScreen() {
     val configuration = LocalConfiguration.current
     val drawerHeightPx = with(density) { configuration.screenHeightDp.dp.toPx() }
     val baseGestureThresholdPx = minOf(drawerHeightPx * 0.22f, with(density) { 160.dp.toPx() })
-    val gestureThresholdPx = baseGestureThresholdPx / 8f
+    val openThresholdPx = baseGestureThresholdPx / 16f
+    val closeThresholdPx = minOf(drawerHeightPx * 0.18f, with(density) { 160.dp.toPx() })
     val drawerOffset = remember { mutableFloatStateOf(drawerHeightPx) }
     val drawerListState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
@@ -132,6 +133,7 @@ fun LauncherScreen() {
             var totalDrag = 0f
             var totalHorizontalDrag = 0f
             var dragOriginY = 0f
+            var dragStartOffset = 0f
             var isDraggingDrawer = false
             var pointerStillDown = true
 
@@ -151,8 +153,9 @@ fun LauncherScreen() {
                     if (!wasOpenAtStart && totalDrag < 0f) {
                         isDraggingDrawer = true
                         settleJob.value?.cancel()
-                        drawerOffset.floatValue =
-                            (drawerHeightPx + totalDrag).coerceIn(0f, drawerHeightPx)
+                        dragOriginY = totalDrag
+                        dragStartOffset = drawerHeightPx * (2f / 3f)
+                        drawerOffset.floatValue = dragStartOffset
                         isDrawerOpen = true
                     } else if (
                         wasOpenAtStart && totalDrag > 0f &&
@@ -162,12 +165,11 @@ fun LauncherScreen() {
                         isDraggingDrawer = true
                         settleJob.value?.cancel()
                         dragOriginY = totalDrag
+                        dragStartOffset = drawerOffset.floatValue
                     }
-                } else if (isDraggingDrawer && wasOpenAtStart) {
-                    drawerOffset.floatValue = (totalDrag - dragOriginY).coerceIn(0f, drawerHeightPx)
                 } else if (isDraggingDrawer) {
                     drawerOffset.floatValue =
-                        (drawerHeightPx + totalDrag).coerceIn(0f, drawerHeightPx)
+                        (dragStartOffset + totalDrag - dragOriginY).coerceIn(0f, drawerHeightPx)
                 }
 
                 if (isDraggingDrawer) change.consume()
@@ -175,9 +177,9 @@ fun LauncherScreen() {
             }
 
             if (isDraggingDrawer) {
-                val shouldClose = wasOpenAtStart && drawerOffset.floatValue >= gestureThresholdPx
+                val shouldClose = wasOpenAtStart && drawerOffset.floatValue >= closeThresholdPx
                 val shouldOpen = !wasOpenAtStart &&
-                    drawerOffset.floatValue <= drawerHeightPx - gestureThresholdPx
+                    drawerOffset.floatValue <= drawerHeightPx - openThresholdPx
                 val shouldSettleOpen = if (wasOpenAtStart) !shouldClose else shouldOpen
                 val target = if (shouldSettleOpen) 0f else drawerHeightPx
                 settleJob.value = coroutineScope.launch {
