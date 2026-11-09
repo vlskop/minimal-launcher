@@ -5,7 +5,6 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.indication
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
@@ -28,7 +27,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -366,7 +364,13 @@ private fun CategoryRow(
             .height(94.dp)
             .clickable(role = Role.Button, onClick = onClick)
     ) {
-        val previewWidth = (maxWidth - 160.dp).coerceAtLeast(0.dp)
+        val previewApps = apps.take(4)
+        val previewWidth = if (previewApps.isEmpty()) {
+            0.dp
+        } else {
+            44.dp * previewApps.size + 8.dp * (previewApps.size - 1)
+        }
+        val previewStart = (maxWidth - 28.dp - previewWidth).coerceAtLeast(0.dp)
         Text(
             text = category.label,
             color = palette.text,
@@ -384,13 +388,11 @@ private fun CategoryRow(
         Row(
             modifier = Modifier
                 .align(Alignment.TopStart)
-                .padding(start = 132.dp, top = 36.dp)
-                .width(previewWidth)
-                .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                .padding(start = previewStart, top = 36.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            apps.take(3).forEach { app ->
+            previewApps.forEach { app ->
                 AppIcon(
                     app = app,
                     favorite = app.packageName in favorites,
