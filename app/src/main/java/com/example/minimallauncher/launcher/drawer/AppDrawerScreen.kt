@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -90,25 +91,7 @@ private data class DrawerPalette(
     val favorite: Color
 )
 
-private val LightDrawerPalette = DrawerPalette(
-    background = Color(0xFFF8F9F7),
-    text = Color(0xFF202420),
-    secondaryText = Color(0xFF838981),
-    searchSurface = Color(0xFFECEEEB),
-    iconTint = Color(0xFF626B62),
-    favorite = Color(0xFFFFC857)
-)
-
-private val DarkDrawerPalette = DrawerPalette(
-    background = Color(0xFF121512),
-    text = Color(0xFFE1E4DF),
-    secondaryText = Color(0xFF9BA397),
-    searchSurface = Color(0xFF292E29),
-    iconTint = Color(0xFFB0B7AF),
-    favorite = Color(0xFFFFD166)
-)
-
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun AppDrawerScreen(
     modifier: Modifier = Modifier,
@@ -125,11 +108,15 @@ fun AppDrawerScreen(
     val focusManager = LocalFocusManager.current
     val coroutineScope = rememberCoroutineScope()
     val locale = LocalLocale.current.platformLocale
-    val palette = if (MaterialTheme.colorScheme.background.luminance() < 0.5f) {
-        DarkDrawerPalette
-    } else {
-        LightDrawerPalette
-    }
+    val colorScheme = MaterialTheme.colorScheme
+    val palette = DrawerPalette(
+        background = colorScheme.background,
+        text = colorScheme.onBackground,
+        secondaryText = colorScheme.onSurfaceVariant,
+        searchSurface = colorScheme.surfaceVariant,
+        iconTint = colorScheme.onSurfaceVariant,
+        favorite = colorScheme.tertiary
+    )
 
     var searchQuery by remember { mutableStateOf("") }
     var searchFocused by remember { mutableStateOf(false) }
