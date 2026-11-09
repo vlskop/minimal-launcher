@@ -16,7 +16,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.ui.input.pointer.PointerEventPass
-import androidx.compose.ui.input.pointer.positionChange
+import androidx.compose.ui.input.pointer.positionChangeIgnoreConsumed
 import androidx.compose.runtime.*
 import androidx.compose.runtime.MutableFloatState
 import com.example.minimallauncher.launcher.drawer.AppDrawerScreen
@@ -129,6 +129,7 @@ fun LauncherScreen() {
             )
             val wasOpenAtStart = drawerOpenState.value
             var totalDrag = 0f
+            var totalHorizontalDrag = 0f
             var dragOriginY = 0f
             var isDraggingDrawer = false
             var pointerStillDown = true
@@ -136,10 +137,16 @@ fun LauncherScreen() {
             while (pointerStillDown) {
                 val event = awaitPointerEvent(PointerEventPass.Initial)
                 val change = event.changes.firstOrNull { it.id == down.id } ?: break
-                val deltaY = change.positionChange().y
+                val positionChange = change.positionChangeIgnoreConsumed()
+                val deltaY = positionChange.y
                 totalDrag += deltaY
+                totalHorizontalDrag += positionChange.x
 
-                if (!isDraggingDrawer && abs(totalDrag) > viewConfiguration.touchSlop) {
+                if (
+                    !isDraggingDrawer &&
+                    abs(totalDrag) > viewConfiguration.touchSlop &&
+                    abs(totalDrag) > abs(totalHorizontalDrag)
+                ) {
                     if (!wasOpenAtStart && totalDrag < 0f) {
                         isDraggingDrawer = true
                         settleJob.value?.cancel()

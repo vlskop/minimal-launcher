@@ -107,11 +107,11 @@ private val DarkDrawerPalette = DrawerPalette(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppDrawerScreen(
+    modifier: Modifier = Modifier,
     viewModel: AppViewModel = viewModel(),
     listState: LazyListState,
     drawerOffset: State<Float>,
     drawerHeightPx: Float,
-    modifier: Modifier = Modifier,
     onClose: suspend () -> Unit
 ) {
     val apps by viewModel.apps.collectAsState()
@@ -150,18 +150,6 @@ fun AppDrawerScreen(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .graphicsLayer {
-                    alpha = (1f - drawerOffset.value / drawerHeightPx)
-                        .coerceIn(0f, 1f) * 0.32f
-                }
-                .background(Color.Black)
-                .clickable {
-                    coroutineScope.launch { onClose() }
-                }
-        )
         Column(
             modifier = modifier
                 .fillMaxSize()
@@ -558,7 +546,7 @@ private fun CategoryAppsSheet(
                         fontSize = 12.sp,
                         lineHeight = 15.sp,
                         textAlign = TextAlign.Center,
-                        maxLines = 2,
+                        maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier
                             .fillMaxWidth()
