@@ -8,7 +8,6 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.indication
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -380,21 +379,14 @@ private fun CategoryRow(
     onLaunch: (AppInfo) -> Unit,
     onToggleFavorite: (String) -> Unit
 ) {
-    BoxWithConstraints(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(104.dp)
             .clip(RoundedCornerShape(24.dp))
             .clickable(role = Role.Button, onClick = onClick)
-            .padding(horizontal = 8.dp, vertical = 8.dp)
     ) {
         val previewApps = apps.take(4)
-        val previewWidth = if (previewApps.isEmpty()) {
-            0.dp
-        } else {
-            44.dp * previewApps.size + 8.dp * (previewApps.size - 1)
-        }
-        val previewStart = (maxWidth - 36.dp - previewWidth).coerceAtLeast(0.dp)
         Text(
             text = category.label,
             color = palette.text,
@@ -404,13 +396,15 @@ private fun CategoryRow(
             letterSpacing = (-0.4).sp,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.align(Alignment.TopStart)
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(start = 8.dp, top = 8.dp)
         )
 
         Row(
             modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(start = previewStart, top = 42.dp),
+                .align(Alignment.CenterEnd)
+                .padding(end = 36.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -432,8 +426,8 @@ private fun CategoryRow(
             lineHeight = 20.sp,
             textAlign = TextAlign.End,
             modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(top = 43.dp)
+                .align(Alignment.CenterEnd)
+                .padding(end = 8.dp)
                 .width(28.dp)
         )
     }
