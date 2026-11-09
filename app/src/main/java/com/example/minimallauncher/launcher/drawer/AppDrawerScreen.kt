@@ -238,7 +238,7 @@ private fun DrawerCategoriesContent(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 24.dp)
+            .padding(horizontal = 12.dp)
     ) {
         AppSearchField(
             value = searchQuery,
@@ -253,7 +253,7 @@ private fun DrawerCategoriesContent(
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .padding(top = 20.dp)
+                    .padding(top = 12.dp)
                     .fillMaxWidth(),
                 contentAlignment = Alignment.Center
             ) {
@@ -268,7 +268,7 @@ private fun DrawerCategoriesContent(
                 state = listState,
                 modifier = Modifier
                     .weight(1f)
-                    .padding(top = 20.dp)
+                    .padding(top = 12.dp)
                     .heightIn(max = 658.dp),
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 8.dp)
             ) {
@@ -386,6 +386,7 @@ private fun CategoryRow(
             .height(104.dp)
             .clip(RoundedCornerShape(24.dp))
             .clickable(role = Role.Button, onClick = onClick)
+            .padding(horizontal = 8.dp, vertical = 8.dp)
     ) {
         val previewApps = apps.take(4)
         val previewWidth = if (previewApps.isEmpty()) {
@@ -403,9 +404,7 @@ private fun CategoryRow(
             letterSpacing = (-0.4).sp,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(start = 8.dp, top = 8.dp)
+            modifier = Modifier.align(Alignment.TopStart)
         )
 
         Row(
@@ -434,7 +433,7 @@ private fun CategoryRow(
             textAlign = TextAlign.End,
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .padding(end = 8.dp, top = 43.dp)
+                .padding(top = 43.dp)
                 .width(28.dp)
         )
     }
