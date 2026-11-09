@@ -383,7 +383,8 @@ private fun CategoryRow(
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxWidth()
-            .height(94.dp)
+            .height(104.dp)
+            .clip(RoundedCornerShape(24.dp))
             .clickable(role = Role.Button, onClick = onClick)
     ) {
         val previewApps = apps.take(4)
@@ -392,7 +393,7 @@ private fun CategoryRow(
         } else {
             44.dp * previewApps.size + 8.dp * (previewApps.size - 1)
         }
-        val previewStart = (maxWidth - 28.dp - previewWidth).coerceAtLeast(0.dp)
+        val previewStart = (maxWidth - 36.dp - previewWidth).coerceAtLeast(0.dp)
         Text(
             text = category.label,
             color = palette.text,
@@ -404,13 +405,13 @@ private fun CategoryRow(
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier
                 .align(Alignment.TopStart)
-                .padding(top = 3.dp)
+                .padding(start = 8.dp, top = 8.dp)
         )
 
         Row(
             modifier = Modifier
                 .align(Alignment.TopStart)
-                .padding(start = previewStart, top = 36.dp),
+                .padding(start = previewStart, top = 42.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -433,7 +434,7 @@ private fun CategoryRow(
             textAlign = TextAlign.End,
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .padding(top = 37.dp)
+                .padding(end = 8.dp, top = 43.dp)
                 .width(28.dp)
         )
     }

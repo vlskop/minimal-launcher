@@ -36,7 +36,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 
 
@@ -50,10 +49,12 @@ fun HomeScreen(
     val apps = appViewModel.apps.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val favorites = favoriteViewModel.favorites.collectAsStateWithLifecycle()
+    val colorScheme = MaterialTheme.colorScheme
 
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(colorScheme.background.copy(alpha = 0.92f))
             .navigationBarsPadding()
             .statusBarsPadding()
             .padding(12.dp),
@@ -66,12 +67,14 @@ fun HomeScreen(
         ) {
             Text(
                 text = uiState.value.time,
-                style = MaterialTheme.typography.displayLarge
+                style = MaterialTheme.typography.displayLarge,
+                color = colorScheme.onBackground
             )
 
             Text(
                 text = uiState.value.date,
-                style = MaterialTheme.typography.bodyLarge
+                style = MaterialTheme.typography.bodyLarge,
+                color = colorScheme.onSurfaceVariant
             )
         }
 
@@ -202,9 +205,9 @@ fun HomeScreen(
                             .size(56.dp)
                             .background(
                                 color = if (isDragging) {
-                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                                    colorScheme.primaryContainer
                                 } else {
-                                    Color.Transparent
+                                    colorScheme.surfaceVariant
                                 },
                                 shape = CircleShape
                             )
@@ -213,7 +216,8 @@ fun HomeScreen(
 
                     Text(
                         text = app.name,
-                        style = MaterialTheme.typography.bodySmall
+                        style = MaterialTheme.typography.bodySmall,
+                        color = colorScheme.onBackground
                     )
                 }
             }
