@@ -33,6 +33,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.runtime.collectAsState
+import com.example.minimallauncher.launcher.FavoriteAppsViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 
 @Composable
@@ -41,6 +45,8 @@ fun AppDrawerScreen(
 ) {
     val apps = viewModel.apps.collectAsState()
     val context = LocalContext.current
+    val favoriteViewModel: FavoriteAppsViewModel = viewModel()
+    val favorites = favoriteViewModel.favorites.collectAsState()
 
     var searchQuery by remember {
         mutableStateOf("")
@@ -100,14 +106,19 @@ fun AppDrawerScreen(
         ) {
             items(filteredApps) { app ->
                 Column(
-                    modifier = Modifier.clickable {
-                        val launchIntent = context.packageManager
-                            .getLaunchIntentForPackage(app.packageName)
+                    modifier = Modifier.combinedClickable(
+                        onClick = {
+                            val launchIntent = context.packageManager
+                                .getLaunchIntentForPackage(app.packageName)
 
-                        if (launchIntent != null) {
-                            context.startActivity(launchIntent)
+                            if (launchIntent != null) {
+                                context.startActivity(launchIntent)
+                            }
+                        },
+                        onLongClick = {
+                            favoriteViewModel.toggleFavorite(app.packageName)
                         }
-                    },
+                    ),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Image(
@@ -116,7 +127,13 @@ fun AppDrawerScreen(
                         modifier = Modifier.size(48.dp)
                     )
 
-                    Text(text = app.name)
+                    Text(
+                        text = if (app.packageName in favorites.value) {
+                            "★ ${app.name}"
+                        } else {
+                            app.name
+                        }
+                    )
                 }
             }
         }

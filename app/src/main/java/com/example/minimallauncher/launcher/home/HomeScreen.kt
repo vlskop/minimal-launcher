@@ -19,15 +19,18 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.layout.statusBarsPadding
+import com.example.minimallauncher.launcher.FavoriteAppsViewModel
 
 @Composable
 fun HomeScreen(
     homeViewModel: HomeViewModel = viewModel(),
-    appViewModel: AppViewModel = viewModel()
+    appViewModel: AppViewModel = viewModel(),
+    favoriteViewModel: FavoriteAppsViewModel = viewModel()
 ) {
     val uiState = homeViewModel.uiState.collectAsStateWithLifecycle()
     val apps = appViewModel.apps.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val favorites = favoriteViewModel.favorites.collectAsStateWithLifecycle()
 
     Column(
         modifier = Modifier
@@ -59,7 +62,14 @@ fun HomeScreen(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            apps.value.take(5).forEach { app ->
+            favorites.value
+                .mapNotNull { packageName ->
+                    apps.value.find { app ->
+                        app.packageName == packageName
+                    }
+                }
+                .take(5)
+                .forEach { app ->
                 Column(
                     modifier = Modifier.clickable {
                         val launchIntent = context.packageManager
