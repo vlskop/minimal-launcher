@@ -1,8 +1,6 @@
 package com.example.minimallauncher.launcher.drawer
 
 import androidx.compose.foundation.Image
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.AnimationVector1D
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -41,6 +39,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -110,7 +109,7 @@ private val DarkDrawerPalette = DrawerPalette(
 fun AppDrawerScreen(
     viewModel: AppViewModel = viewModel(),
     listState: LazyListState,
-    drawerOffset: Animatable<Float, AnimationVector1D>,
+    drawerOffset: State<Float>,
     drawerHeightPx: Float,
     modifier: Modifier = Modifier,
     onClose: suspend () -> Unit

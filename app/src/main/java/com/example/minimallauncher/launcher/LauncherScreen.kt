@@ -17,8 +17,8 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.positionChange
-import androidx.compose.ui.input.pointer.consume
 import androidx.compose.runtime.*
+import androidx.compose.runtime.MutableFloatState
 import com.example.minimallauncher.launcher.drawer.AppDrawerScreen
 import com.example.minimallauncher.launcher.home.HomeScreen
 import androidx.lifecycle.Lifecycle
@@ -35,6 +35,7 @@ import androidx.core.content.ContextCompat
 import androidx.compose.ui.platform.LocalContext
 import android.content.Context
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -49,10 +50,23 @@ fun LauncherScreen() {
     val configuration = LocalConfiguration.current
     val drawerHeightPx = with(density) { configuration.screenHeightDp.dp.toPx() }
     val dismissThresholdPx = minOf(drawerHeightPx * 0.22f, with(density) { 160.dp.toPx() })
-    val drawerOffset = remember { Animatable(drawerHeightPx) }
+    val drawerOffset = remember { mutableFloatStateOf(drawerHeightPx) }
     val drawerListState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
     val drawerOpenState = rememberUpdatedState(isDrawerOpen)
+    val settleJob = remember { mutableStateOf<Job?>(null) }
+
+    suspend fun animateDrawerTo(target: Float) {
+        Animatable(drawerOffset.floatValue).animateTo(
+            targetValue = target,
+            animationSpec = spring(
+                dampingRatio = 0.86f,
+                stiffness = Spring.StiffnessMediumLow
+            )
+        ) {
+            drawerOffset.floatValue = value
+        }
+    }
 
     DisposableEffect(context, appViewModel) {
         val packageReceiver = object : BroadcastReceiver() {
@@ -128,7 +142,9 @@ fun LauncherScreen() {
                 if (!isDraggingDrawer && abs(totalDrag) > viewConfiguration.touchSlop) {
                     if (!wasOpenAtStart && totalDrag < 0f) {
                         isDraggingDrawer = true
-                        drawerOffset.snapTo((drawerHeightPx + totalDrag).coerceIn(0f, drawerHeightPx))
+                        settleJob.value?.cancel()
+                        drawerOffset.floatValue =
+                            (drawerHeightPx + totalDrag).coerceIn(0f, drawerHeightPx)
                         isDrawerOpen = true
                     } else if (
                         wasOpenAtStart && totalDrag > 0f &&
@@ -136,12 +152,14 @@ fun LauncherScreen() {
                         drawerListState.firstVisibleItemScrollOffset == 0
                     ) {
                         isDraggingDrawer = true
+                        settleJob.value?.cancel()
                         dragOriginY = totalDrag
                     }
                 } else if (isDraggingDrawer && wasOpenAtStart) {
-                    drawerOffset.snapTo((totalDrag - dragOriginY).coerceIn(0f, drawerHeightPx))
+                    drawerOffset.floatValue = (totalDrag - dragOriginY).coerceIn(0f, drawerHeightPx)
                 } else if (isDraggingDrawer) {
-                    drawerOffset.snapTo((drawerHeightPx + totalDrag).coerceIn(0f, drawerHeightPx))
+                    drawerOffset.floatValue =
+                        (drawerHeightPx + totalDrag).coerceIn(0f, drawerHeightPx)
                 }
 
                 if (isDraggingDrawer) change.consume()
@@ -149,19 +167,15 @@ fun LauncherScreen() {
             }
 
             if (isDraggingDrawer) {
-                val shouldClose = wasOpenAtStart && drawerOffset.value >= dismissThresholdPx
+                val shouldClose = wasOpenAtStart && drawerOffset.floatValue >= dismissThresholdPx
                 val shouldOpen = !wasOpenAtStart &&
-                    drawerOffset.value <= drawerHeightPx - dismissThresholdPx
+                    drawerOffset.floatValue <= drawerHeightPx - dismissThresholdPx
                 val shouldSettleOpen = if (wasOpenAtStart) !shouldClose else shouldOpen
                 val target = if (shouldSettleOpen) 0f else drawerHeightPx
-                drawerOffset.animateTo(
-                    targetValue = target,
-                    animationSpec = spring(
-                        dampingRatio = 0.86f,
-                        stiffness = Spring.StiffnessMediumLow
-                    )
-                )
-                if (target == drawerHeightPx) isDrawerOpen = false
+                settleJob.value = coroutineScope.launch {
+                    animateDrawerTo(target)
+                    if (target == drawerHeightPx) isDrawerOpen = false
+                }
             }
         }
     }
@@ -179,13 +193,11 @@ fun LauncherScreen() {
                 drawerOffset = drawerOffset,
                 drawerHeightPx = drawerHeightPx,
                 modifier = Modifier.offset {
-                    IntOffset(x = 0, y = drawerOffset.value.roundToInt())
+                    IntOffset(x = 0, y = drawerOffset.floatValue.roundToInt())
                 },
                 onClose = {
-                    drawerOffset.animateTo(
-                        drawerHeightPx,
-                        spring(dampingRatio = 0.86f, stiffness = Spring.StiffnessMediumLow)
-                    )
+                    settleJob.value?.cancel()
+                    animateDrawerTo(drawerHeightPx)
                     isDrawerOpen = false
                 }
             )
