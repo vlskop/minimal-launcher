@@ -20,7 +20,8 @@ class AppRepository(
             AppInfo(
                 packageName = resolveInfo.activityInfo.packageName,
                 name = resolveInfo.loadLabel(packageManager).toString(),
-                icon = resolveInfo.loadIcon(packageManager)
+                icon = resolveInfo.loadIcon(packageManager),
+                category = resolveInfo.activityInfo.applicationInfo.category
             )
         }.sortedBy { it.name.lowercase() }
     }

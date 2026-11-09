@@ -18,11 +18,60 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.runtime.DisposableEffect
 import com.example.minimallauncher.launcher.home.AppViewModel
+import android.content.BroadcastReceiver
+import android.content.Intent
+import android.content.IntentFilter
+import androidx.core.content.ContextCompat
+import androidx.compose.ui.platform.LocalContext
+import android.content.Context
+
 @Composable
 fun LauncherScreen() {
     var isDrawerOpen by remember { mutableStateOf(false) }
     val appViewModel: AppViewModel = viewModel()
+    val favoriteViewModel: FavoriteAppsViewModel = viewModel()
     val lifecycleOwner = LocalLifecycleOwner.current
+    val context = LocalContext.current
+
+    DisposableEffect(context, appViewModel) {
+        val packageReceiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+
+                val receivedIntent = intent ?: return
+                val action = receivedIntent.action ?: return
+
+                appViewModel.refreshApps()
+
+                if (
+                    action == Intent.ACTION_PACKAGE_REMOVED &&
+                    !receivedIntent.getBooleanExtra(Intent.EXTRA_REPLACING, false)
+                    ) {
+                        val packageName = receivedIntent.data?.schemeSpecificPart
+                            ?: return
+                        favoriteViewModel.removeFavorite(packageName)
+                    }
+            }
+        }
+
+        val filter = IntentFilter().apply {
+            addAction(Intent.ACTION_PACKAGE_ADDED)
+            addAction(Intent.ACTION_PACKAGE_REMOVED)
+            addAction(Intent.ACTION_PACKAGE_CHANGED)
+            addDataScheme("package")
+        }
+
+        ContextCompat.registerReceiver(
+            context,
+            packageReceiver,
+            filter,
+            ContextCompat.RECEIVER_EXPORTED
+        )
+
+        onDispose {
+            context.unregisterReceiver(packageReceiver)
+        }
+
+    }
 
     DisposableEffect(lifecycleOwner, appViewModel) {
         val observer = LifecycleEventObserver { _, event ->

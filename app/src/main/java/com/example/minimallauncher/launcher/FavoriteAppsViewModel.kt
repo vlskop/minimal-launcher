@@ -32,6 +32,18 @@ class FavoriteAppsViewModel(
         repository.saveFavorites(updatedFavorites)
     }
 
+    fun removeFavorite(packageName: String) {
+        val currentFavorites = _favorites.value
+
+        if (packageName !in currentFavorites) {
+            return
+        }
+
+        val updatedFavorites = currentFavorites - packageName
+        _favorites.value = updatedFavorites
+        repository.saveFavorites(updatedFavorites)
+    }
+
     fun moveFavorite(fromIndex: Int, toIndex: Int) {
         val currentFavorites = _favorites.value
 
